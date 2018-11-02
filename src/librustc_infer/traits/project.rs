@@ -14,6 +14,7 @@ use super::{VtableClosureData, VtableFnPointerData, VtableGeneratorData, VtableI
 
 use crate::infer::type_variable::{TypeVariableOrigin, TypeVariableOriginKind};
 use crate::infer::{InferCtxt, InferOk, LateBoundRegionConversionTime};
+use rustc::middle::recursion_limit::ensure_sufficient_stack;
 use rustc::ty::fold::{TypeFoldable, TypeFolder};
 use rustc::ty::subst::{InternalSubsts, Subst};
 use rustc::ty::{self, ToPolyTraitRef, ToPredicate, Ty, TyCtxt, WithConstness};
@@ -263,7 +264,7 @@ where
 {
     debug!("normalize_with_depth(depth={}, value={:?})", depth, value);
     let mut normalizer = AssocTypeNormalizer::new(selcx, param_env, cause, depth, obligations);
-    let result = normalizer.fold(value);
+    let result = ensure_sufficient_stack(|| normalizer.fold(value));
     debug!(
         "normalize_with_depth: depth={} result={:?} with {} obligations",
         depth,
@@ -343,7 +344,7 @@ impl<'a, 'b, 'tcx> TypeFolder<'tcx> for AssocTypeNormalizer<'a, 'b, 'tcx> {
                         let generic_ty = self.tcx().type_of(def_id);
                         let concrete_ty = generic_ty.subst(self.tcx(), substs);
                         self.depth += 1;
-                        let folded_ty = self.fold_ty(concrete_ty);
+                        let folded_ty = ensure_sufficient_stack(|| self.fold_ty(concrete_ty));
                         self.depth -= 1;
                         folded_ty
                     }
