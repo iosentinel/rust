@@ -1,5 +1,6 @@
 pub use self::def_id_forest::DefIdForest;
 
+use crate::middle::recursion_limit::ensure_sufficient_stack;
 use crate::ty;
 use crate::ty::context::TyCtxt;
 use crate::ty::TyKind::*;
@@ -178,7 +179,7 @@ impl<'tcx> TyS<'tcx> {
     /// Calculates the forest of `DefId`s from which this type is visibly uninhabited.
     fn uninhabited_from(&self, tcx: TyCtxt<'tcx>) -> DefIdForest {
         match self.kind {
-            Adt(def, substs) => def.uninhabited_from(tcx, substs),
+            Adt(def, substs) => ensure_sufficient_stack(|| def.uninhabited_from(tcx, substs)),
 
             Never => DefIdForest::full(tcx),
 
